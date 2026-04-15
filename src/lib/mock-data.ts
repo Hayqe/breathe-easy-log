@@ -71,7 +71,10 @@ let _isMockMode: boolean | null = null;
 export async function checkMockMode(): Promise<boolean> {
   if (_isMockMode !== null) return _isMockMode;
   try {
-    const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/health`, { signal: AbortSignal.timeout(2000) });
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 2000);
+    const res = await fetch(`${import.meta.env.VITE_API_URL || '/api'}/health`, { signal: controller.signal });
+    clearTimeout(timer);
     _isMockMode = !res.ok;
   } catch {
     _isMockMode = true;
