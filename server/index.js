@@ -80,6 +80,51 @@ app.get('/api/auth/me', auth, async (req, res) => {
   }
 });
 
+// --- Password change ---
+app.put('/api/auth/password', auth, async (req, res) => {
+  try {
+    const { current_password, new_password } = req.body;
+    if (!new_password || new_password.length < 8) {
+      return res.status(400).json({ error: 'Nieuw wachtwoord moet minimaal 8 tekens zijn' });
+    }
+    const result = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.userId]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Gebruiker niet gevonden' });
+
+    const valid = await bcrypt.compare(current_password, result.rows[0].password_hash);
+    if (!valid) return res.status(401).json({ error: 'Huidig wachtwoord is onjuist' });
+
+    const hash = await bcrypt.hash(new_password, 12);
+    await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.userId]);
+    res.json({ message: 'Wachtwoord gewijzigd' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Wachtwoord wijzigen mislukt' });
+  }
+});
+
+// --- Settings routes ---
+app.get('/api/settings', auth, async (req, res) => {
+  try {
+    const result = await pool.query('SELECT aqicn_token FROM users WHERE id = $1', [req.userId]);
+    if (!result.rows[0]) return res.status(404).json({ error: 'Gebruiker niet gevonden' });
+    res.json({ aqicn_token: result.rows[0].aqicn_token || '' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Instellingen ophalen mislukt' });
+  }
+});
+
+app.put('/api/settings', auth, async (req, res) => {
+  try {
+    const { aqicn_token } = req.body;
+    await pool.query('UPDATE users SET aqicn_token = $1 WHERE id = $2', [aqicn_token || '', req.userId]);
+    res.json({ message: 'Instellingen opgeslagen' });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Instellingen opslaan mislukt' });
+  }
+});
+
 // --- Logs routes ---
 app.get('/api/logs', auth, async (req, res) => {
   try {
@@ -125,7 +170,14 @@ app.get('/api/air-quality', auth, async (req, res) => {
     const { lat, lng } = req.query;
     if (!lat || !lng) return res.status(400).json({ error: 'lat en lng zijn vereist' });
 
-    const response = await fetch(`https://api.waqi.info/feed/geo:${lat};${lng}/?token=${AQICN_TOKEN}`);
+    // Check if user has personal AQICN token
+    let token = AQICN_TOKEN;
+    const userResult = await pool.query('SELECT aqicn_token FROM users WHERE id = $1', [req.userId]);
+    if (userResult.rows[0]?.aqicn_token) {
+      token = userResult.rows[0].aqicn_token;
+    }
+
+    const response = await fetch(`https://api.waqi.info/feed/geo:${lat};${lng}/?token=${token}`);
     const data = await response.json();
 
     if (data.status !== 'ok') {
