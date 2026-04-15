@@ -1,3 +1,4 @@
+/* Auth context - provides user state and auth methods */
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import type { User } from '@/types';
 import { api } from '@/lib/api';
