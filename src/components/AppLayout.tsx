@@ -1,10 +1,11 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Wind, Plus, History, LogOut } from 'lucide-react';
+import { Wind, Plus, History, LogOut, Settings } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 export function AppLayout({ children }: { children: React.ReactNode }) {
-  const { logout, user } = useAuth();
+  const { logout, user, mockMode } = useAuth();
   const location = useLocation();
 
   return (
@@ -17,9 +18,19 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="text-lg font-light tracking-wide">Astma Logger</span>
           </Link>
           <div className="flex items-center gap-1">
+            {mockMode && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 mr-1 border-primary/30 text-primary/70">
+                Demo
+              </Badge>
+            )}
             <span className="hidden sm:inline text-sm text-muted-foreground mr-2">
               {user?.display_name}
             </span>
+            <Link to="/settings">
+              <Button variant="ghost" size="icon" title="Instellingen">
+                <Settings className="h-4 w-4" />
+              </Button>
+            </Link>
             <Button variant="ghost" size="icon" onClick={logout} title="Uitloggen">
               <LogOut className="h-4 w-4" />
             </Button>
@@ -52,6 +63,15 @@ export function AppLayout({ children }: { children: React.ReactNode }) {
           >
             <History className="h-5 w-5" />
             Geschiedenis
+          </Link>
+          <Link
+            to="/settings"
+            className={`flex-1 flex flex-col items-center py-3 text-xs gap-1 transition-colors ${
+              location.pathname === '/settings' ? 'text-primary' : 'text-muted-foreground'
+            }`}
+          >
+            <Settings className="h-5 w-5" />
+            Instellingen
           </Link>
         </div>
       </nav>
