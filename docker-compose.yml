@@ -1,0 +1,45 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: astma_logger
+      POSTGRES_USER: ${POSTGRES_USER:-astma}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Stel POSTGRES_PASSWORD in via .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./server/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-astma}"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-astma}:${POSTGRES_PASSWORD}@db:5432/astma_logger
+      JWT_SECRET: ${JWT_SECRET:?Stel JWT_SECRET in via .env}
+      AQICN_TOKEN: ${AQICN_TOKEN:?Stel AQICN_TOKEN in via .env}
+      PORT: 3001
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: frontend
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${PORT:-8080}:80"
+
+volumes:
+  pgdata:
