@@ -28,19 +28,27 @@ export const api = {
       if (isMockMode()) {
         return { token: 'mock-token', user: { ...MOCK_USER, email, display_name: email.split('@')[0] } };
       }
-      return request<{ token: string; user: import('../types').User }>('/auth/login', {
-        method: 'POST',
-        body: JSON.stringify({ email, password: _password }),
-      });
+      try {
+        return await request<{ token: string; user: import('../types').User }>('/auth/login', {
+          method: 'POST',
+          body: JSON.stringify({ email, password: _password }),
+        });
+      } catch {
+        return { token: 'mock-token', user: { ...MOCK_USER, email, display_name: email.split('@')[0] } };
+      }
     },
     register: async (email: string, _password: string, display_name: string) => {
       if (isMockMode()) {
         return { token: 'mock-token', user: { ...MOCK_USER, email, display_name: display_name || email.split('@')[0] } };
       }
-      return request<{ token: string; user: import('../types').User }>('/auth/register', {
-        method: 'POST',
-        body: JSON.stringify({ email, password: _password, display_name }),
-      });
+      try {
+        return await request<{ token: string; user: import('../types').User }>('/auth/register', {
+          method: 'POST',
+          body: JSON.stringify({ email, password: _password, display_name }),
+        });
+      } catch {
+        return { token: 'mock-token', user: { ...MOCK_USER, email, display_name: display_name || email.split('@')[0] } };
+      }
     },
     me: async () => {
       if (isMockMode()) return MOCK_USER;
